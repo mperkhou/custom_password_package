@@ -10,12 +10,13 @@ class PasswordGenerator:
         self.length = self.rules['length']
         self.allowed_characters_dict = self.rules['allowed_characters']
         self.required_characters = self.rules['required_characters']
-        
+
     ####  begin internal methods used to generate new password
     def _generate_random_index(self, max_length):
         return random.randint(0, max_length - 1)
-
+    
     def _group_generator(self, max_length, chars):
+        #returns n random integers based on requirements in JSON
         return ''.join(random.choice(chars) for _ in range(max_length))
 
     def _handle_rule(self, required_rule):
@@ -28,8 +29,8 @@ class PasswordGenerator:
         if section_type == 'groups':
             result = ''
             for i in range(count):
-                random_index = self._generate_random_index(section_length)
-                result += sub_section[random_index]
+                random_index = self._generate_random_index(section_length) #generates random integer 
+                result += sub_section[random_index] #retrieves random character from allowed characters
             return result
 
         if section_type == 'constants':
@@ -40,7 +41,10 @@ class PasswordGenerator:
                     return self._group_generator(count, string.ascii_uppercase)
                 case 'digits':
                     return self._group_generator(count, string.digits)
-       # create the base of the password based on required characters
+
+
+
+    # create the base of the password based on required characters
     def _generate_base(self):
         password = ''
         for required_rule in self.required_characters:
@@ -70,7 +74,7 @@ class PasswordGenerator:
     ####  end: internal methods for generating password
 
     ####   begin: internal methods for validating passwords
-    def _validate_consecutive(self, password, max_allowed):
+    def _validate_consecutive(self, password, max_allowed): #validate consecutive
         consecutive_occurrences = {}
         for char in password:
             count = 1
@@ -82,19 +86,24 @@ class PasswordGenerator:
             consecutive_occurrences[char] = count
         return True
 
-    def _validate_occurrence(self, password, max_allowed):
+    def _validate_occurrence(self, password, max_allowed): #validate occurrence
         occurrences = [password.count(char) for char in password]
         if max(occurrences) > max_allowed:
             print(
                 f"cannot have more than {max_allowed} of any character")
             return False
         return True
-    def _handle_rule_for_validation(self, allowed_characters_type, allowed_characters_subtype, allowed_characters_dict):
+    def _handle_rule_for_validation(self, allowed_characters_type, allowed_characters_subtype):
+        # gets called iteravily. Outputs a string of allowed characters based on which group the
+        # and subgroup associated to it. 
+        # Example: allowed_characters_type = "constants" & allowed_characters_subtype = "lowercase" 
+        # returns "abcdefghijklmnopqrstuwvxyz". 
+
         if allowed_characters_type == 'groups':
-            return allowed_characters_dict[allowed_characters_type][allowed_characters_subtype]
+            return self.allowed_characters_dict[allowed_characters_type][allowed_characters_subtype]
             
         if allowed_characters_type == 'constants':
-            string_type = allowed_characters_dict[allowed_characters_type][allowed_characters_subtype]
+            string_type = self.allowed_characters_dict[allowed_characters_type][allowed_characters_subtype]
             
             match string_type:
                 case 'ascii_lowercase':
@@ -106,27 +115,25 @@ class PasswordGenerator:
                 case 'digits':
                     return string.digits
 
-    def _get_all_allowed_chars(self):
-        allowed_characters_dict = rules['allowed_characters']
+    def _get_all_allowed_chars(self): #cycles through allowed allowed characters, returns list of all of them merged
+        
         allowed_characters_string = ''
-        for allowed_characters_type in allowed_characters_dict:
-            for allowed_characters_subtype in allowed_characters_dict[allowed_characters_type]:
-                allowed_characters_string += self._handle_rule_for_validation(allowed_characters_type, allowed_characters_subtype, allowed_characters_dict)
+        for allowed_characters_type in self.allowed_characters_dict:
+            for allowed_characters_subtype in self.allowed_characters_dict[allowed_characters_type]:
+                allowed_characters_string += self._handle_rule_for_validation(allowed_characters_type, allowed_characters_subtype)
         return allowed_characters_string
 
-    def _check_required_characters(self, required_rule, password, allowed_characters_dict):
-        allowed_characters_type = f"{required_rule[1]}s"
+    def _check_required_characters(self, required_rule, password):
+        allowed_characters_type = f"{required_rule[1]}s" # hack to add "s" to the of "constant" and "group", so I can access dict keys in allowed_chars
         allowed_characters_subtype = required_rule[-1]
         # using handler functions to extract the string with which to compare password with
-        group = self._handle_rule_for_validation(allowed_characters_type, allowed_characters_subtype, allowed_characters_dict)
-        #print(group)
-
-        # validate that the password contains at least the number of instances of the specified characters in given rule 
+        group = self._handle_rule_for_validation(allowed_characters_type, allowed_characters_subtype)
+        # validate that the password contains the # of needed char of each type
         required_count = required_rule[0]
         count = 0
         for char in password:
             count += group.count(char)
-            
+
         if count < required_count:
             print(
                 f'Password violation:\nyou need at least {required_count} {allowed_characters_subtype}')
@@ -134,7 +141,8 @@ class PasswordGenerator:
 
         return True
 
-    def _allowed(self,password: str) -> bool: #checks everything but length
+    def _allowed(self,password: str) -> bool: #checks everything but length.
+        # this method is also used to validate the base password to make sure the randomly chosen values aren't violating
         violations = self.rules['violations']
         banned_words = violations['verboten']
             # I'm assuming the word is banned regardless of casing
@@ -165,7 +173,7 @@ class PasswordGenerator:
         # check required_characters
         #
         for required_rule in required_characters:
-            validated = self._check_required_characters(required_rule, password, allowed_characters_dict)
+            validated = self._check_required_characters(required_rule, password)
         return validated
     ####   end: internal methods for validating passwords
 
@@ -187,9 +195,6 @@ class PasswordGenerator:
         return self._populate_base(password)
 
     
-    
-    
-    
     def allowed(self, password: str) -> bool:
         # Check Length
         length_requirement = self.rules['length']
@@ -197,9 +202,26 @@ class PasswordGenerator:
             print(f'{password} length is < {length_requirement}')
             return False
         return self._allowed(password)
-        
-        # Run all other checks:
+      
+    ####    convenience function
+    def password_from_config_file(filepath: str) -> str:
 
+        def _getRules(filename):
+            rules = {}
+            with open(filename, 'rt') as json_string:
+                rules = json.load(json_string)
+            return rules
+        
+        rules = _getRules(filepath)
+        newPassword = PasswordGenerator(rules)
+        new_password = newPassword.new()
+        return new_password    
+
+    
+    
+    
+    
+    
         
 
 
@@ -218,5 +240,7 @@ rules = getRules(FILENAME)
 newPassword = PasswordGenerator(rules)
 new_password = newPassword.new()
 
-print(new_password)
-print(newPassword.allowed(new_password))
+#print(new_password)
+#print(newPassword.allowed(new_password))
+
+print('./././config_strong.json'
