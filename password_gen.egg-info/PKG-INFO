@@ -1,0 +1,17 @@
+Metadata-Version: 2.1
+Name: password-gen
+Version: 0.0.3
+Summary: Advanced Password Generator
+Author: Max Perkhounkov
+Author-email: <mperkhounkov1@email.com>
+License: UNKNOWN
+Keywords: python,first package
+Platform: UNKNOWN
+Classifier: Development Status :: alpha
+Classifier: Intended Audience :: Education
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: MacOS :: MacOS X
+Classifier: Operating System :: Microsoft :: Windows
+
+Python package that generates passwords based on a requirements JSON input
+

@@ -1,5 +1,4 @@
 import json
-import re
 import random
 import string
 
@@ -7,9 +6,15 @@ class PasswordGenerator:
 
     def __init__(self, config: str):
         self.rules = config
-        self.length = self.rules['length']
         self.allowed_characters_dict = self.rules['allowed_characters']
         self.required_characters = self.rules['required_characters']
+
+        try:
+            self.length = self.rules['length']
+        except:
+            self.length = '8'
+        else:
+            self.length = self.rules['length']
 
     ####  begin internal methods used to generate new password
     def _generate_random_index(self, max_length):
@@ -162,8 +167,8 @@ class PasswordGenerator:
 
         # check allowed characters
         #
-        allowed_characters_dict = rules['allowed_characters']
-        required_characters = rules['required_characters']
+        allowed_characters_dict = self.rules['allowed_characters']
+        required_characters = self.rules['required_characters']
         allowed_characters = self._get_all_allowed_chars() #gets merged string of all allowed characters
         for char in password:
             if char not in allowed_characters:
@@ -203,44 +208,20 @@ class PasswordGenerator:
             return False
         return self._allowed(password)
       
-    ####    convenience function
-    def password_from_config_file(filepath: str) -> str:
 
-        def _getRules(filename):
-            rules = {}
-            with open(filename, 'rt') as json_string:
-                rules = json.load(json_string)
-            return rules
+
+    
+def password_from_config_file(filepath: str) -> str:
+
+    def _getRules(filename):
+        rules = {}
+        with open(filename, 'rt') as json_string:
+            rules = json.load(json_string)
+        return rules
+
+    rules = _getRules(filepath)
+    newPassword = PasswordGenerator(rules)
+    new_password = newPassword.new()
+    return new_password      
+
         
-        rules = _getRules(filepath)
-        newPassword = PasswordGenerator(rules)
-        new_password = newPassword.new()
-        return new_password    
-
-    
-    
-    
-    
-    
-        
-
-
-
-
-FILENAME = './././config_strong.json'
-def getRules(filename):
-    rules = {}
-    with open(filename, 'rt') as json_string:
-        rules = json.load(json_string)
-    return rules
-
-
-rules = getRules(FILENAME)
-
-newPassword = PasswordGenerator(rules)
-new_password = newPassword.new()
-
-#print(new_password)
-#print(newPassword.allowed(new_password))
-
-print('./././config_strong.json'
